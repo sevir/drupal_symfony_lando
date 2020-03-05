@@ -1,0 +1,65 @@
+name: drupal-and-symfony
+recipe: lamp
+
+config:
+  webroot: .
+
+proxy:
+  appserver:
+    - "drupal.lndo.site"
+    - "symfony.lndo.site"
+
+services:
+  server:
+    type: php:7.3
+    via: cli
+
+  appserver:
+    type: php:7.3
+    via: apache:2.4
+    ssl: false
+    webroot: .
+    xdebug: false
+    composer: []
+    config:
+      vhosts: ./.lando/vhosts.cnf
+
+  database:
+    type: mysql:5.7
+    portforward: false
+    # config: ./.lando/mysql.cnf
+    creds:
+      user: mysql
+      password: mysql
+      database: database
+
+  # Local mail server for testing
+  mailserver:
+    type: mailhog
+    portforward: false
+    hogfrom:
+      - appserver
+      - server
+
+  # redis:
+  #   type: redis
+  #   persist: false
+  #   portforward: false
+  
+tooling:
+  symfony:
+    service: server
+    cmd: /var/www/.symfony/bin/symfony
+  install-drupal:
+    service: server
+    cmd: composer create-project Vardot/varbase-project drupal --no-dev --no-interaction
+  install-symfony:
+    service: server
+    cmd: wget https://get.symfony.com/cli/installer -O - | bash
+  create-symfony-project:
+    service: server
+    cmd: /var/www/.symfony/bin/symfony new symfony
+
+events:
+  post-start:
+    - cp -f /app/.lando/php.ini /usr/local/etc/php/
